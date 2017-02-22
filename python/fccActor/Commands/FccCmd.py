@@ -7,6 +7,17 @@ import opscore.protocols.types as types
 from opscore.utility.qstr import qstr
 
 class FccCmd(object):
+	""" *Commmand Interface for MHS*
+
+	Command list
+		| ping
+		| status
+		| reconnect
+		| expose exptime=<float: 0.0-99.9>
+		| setgain gain=<int: 0-3>
+		| abort
+
+	 """
 
 	def __init__(self, actor):
 		# This lets us access the rest of the actor.
@@ -28,9 +39,9 @@ class FccCmd(object):
 
 		# Define typed command arguments for the above commands.
 		self.keys = keys.KeysDictionary("fcc_fcc", (1, 1),
-										keys.Key("exptime", types.Float(), help="Exposure time(s)"),
-										keys.Key("gain", types.Int(), help="Gain setting(0-3)"),
-									   )
+			keys.Key("exptime", types.Float(), help="Exposure time(s)"),
+			keys.Key("gain", types.Int(), help="Gain setting(0-3)"),
+			)
 
 	def ping(self, cmd):
 		"""Query the actor for liveness/happiness."""
@@ -69,16 +80,21 @@ class FccCmd(object):
 		return os.path.join(path, 'FCC%06d.fits' % (self.actor.exposureID))
 
 	def expose(self, cmd):
-		""" Take an exposure with multiple frames. """
+		""" Take an exposure with exposure time as the parameter (0-99.9s)
+
+		This comand asks the AWAIBA video camera to capture images for as long as the exposure time.
+		It then adds all the frames together and save it as a FITS file
+
+		During the exposure, you can use abort command to cancel it.
+
+		"""
 
 		exptime = cmd.cmd.keywords['exptime'].values[0]
 		filename = self._getNextFilename(cmd)
 		self.actor.camera.expose(cmd, exptime, filename)
 
-		#cmd.finish()
-
 	def setGain(self, cmd):
-		""" Set gain in db """
+		""" Set camera gain (0-3), the default value is 2 """
 
 		gain = cmd.cmd.keywords['gain'].values[0]
 		self.actor.camera.set_gain(cmd, gain)
