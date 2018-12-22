@@ -1,0 +1,5 @@
+# udev rules for BAP Image Systems AC62KUSB minicamera device. To be placed in 
+# /etc/udev/rules.d/ (for modern Debian-like distros)
+SUBSYSTEMS!="usb", ACTION!="add", GOTO="ac62kusb_rules_end"
+ATTRS{idVendor}=="14f3", ATTRS{idProduct}=="0071", GROUP="plugdev", MODE="0666"
+LABEL="ac62kusb_rules_end"

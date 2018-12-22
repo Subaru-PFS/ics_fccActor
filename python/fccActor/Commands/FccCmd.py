@@ -12,9 +12,9 @@ class FccCmd(object):
 	Command list
 		| ping
 		| status
-		| reconnect
-		| expose exptime=<float: 0.0-99.9>
+		| expose [frames=<int>]
 		| setgain gain=<int: 0-3>
+		| setexptime exptime=<int: 0-249>
 		| abort
 
 	 """
@@ -31,15 +31,15 @@ class FccCmd(object):
 		self.vocab = [
 			('ping', '', self.ping),
 			('status', '', self.status),
-			('reconnect', '', self.reconnect),
-			('expose', '<exptime>', self.expose),
-			('setgain', '<gain>', self.setGain),
-			('abort', '', self.abort),
+			('expose', '[<frames>]', self.expose),
+			('setexptime', '[<exptime>]', self.setExptime),
+			('setgain', '[<gain>]', self.setGain),
 		]
 
 		# Define typed command arguments for the above commands.
-		self.keys = keys.KeysDictionary("fcc_fcc", (1, 1),
-			keys.Key("exptime", types.Float(), help="Exposure time(s)"),
+		self.keys = keys.KeysDictionary("fcc_fcc", (1, 2),
+			keys.Key("frames", types.Int(), help="Number of frames"),
+			keys.Key("exptime", types.Int(), help="Exposure time(0-249)"),
 			keys.Key("gain", types.Int(), help="Gain setting(0-3)"),
 			)
 
@@ -56,12 +56,6 @@ class FccCmd(object):
 		self.actor.camera.sendStatusKeys(cmd)
 		cmd.inform('text="Present!"')
 		cmd.finish()
-
-	def reconnect(self, cmd):
-		""" reconnect camera device """
-
-		self.actor.connectCamera(cmd)
-		cmd.finish('text="camera connected!"')
 
 	def _getNextFilename(self, cmd):
 		""" Fetch next image filename. 
@@ -80,28 +74,40 @@ class FccCmd(object):
 		return os.path.join(path, 'FCC%06d.fits' % (self.actor.exposureID))
 
 	def expose(self, cmd):
-		""" Take an exposure with exposure time as the parameter (0-99.9s)
+		""" Take exposures with a number of frames
 
-		This comand asks the AWAIBA video camera to capture images for as long as the exposure time.
+		This comand asks the AC62KUSB video camera to capture images for a number of frames.
 		It then adds all the frames together and save it as a FITS file
-
-		During the exposure, you can use abort command to cancel it.
 
 		"""
 
-		exptime = cmd.cmd.keywords['exptime'].values[0]
+		cmdKeys = cmd.cmd.keywords
+		if 'frames' in cmdKeys:
+			frames = cmd.cmd.keywords['frames'].values[0]
+		else:
+			frames = 1
 		filename = self._getNextFilename(cmd)
-		self.actor.camera.expose(cmd, exptime, filename)
-
-	def setGain(self, cmd):
-		""" Set camera gain (0-3), the default value is 2 """
-
-		gain = cmd.cmd.keywords['gain'].values[0]
-		self.actor.camera.set_gain(cmd, gain)
+		self.actor.camera.expose(cmd, filename, frames)
 		cmd.finish()
 
-	def abort(self, cmd):
-		""" Abort current exposure """
+	def setExptime(self, cmd):
+		""" Set camera gain (0-3), the default value is 240 """
 
-		self.actor.camera.cancel(cmd)
+		cmdKeys = cmd.cmd.keywords
+		if 'exptime' in cmdKeys:
+			exptime = cmdKeys['exptime'].values[0]
+		else:
+			exptime = self.actor.exptime
+		self.actor.camera.setExptime(cmd, exptime)
+		cmd.finish()
+
+	def setGain(self, cmd):
+		""" Set camera gain (0-3), the default value is 0 """
+
+		cmdKeys = cmd.cmd.keywords
+		if 'gain' in cmdKeys:
+			gain = cmd.cmd.keywords['gain'].values[0]
+		else:
+			gain = self.actor.gain
+		self.actor.camera.setGain(cmd, gain)
 		cmd.finish()

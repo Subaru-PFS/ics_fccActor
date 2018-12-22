@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import actorcore.Actor
+from importlib import reload
 import camera
 
 class Fcc(actorcore.Actor.Actor):
@@ -12,14 +13,14 @@ class Fcc(actorcore.Actor.Actor):
                                        configFile=configFile)
         # We will actually use a allocator with "global" sequencing
         self.exposureID = 0
-        self.host = self.config.get('fcc', 'camHost')
-        self.port = int(self.config.get('fcc', 'camPort'))
+        self.exptime = int(self.config.get('fcc', 'exptime'))
+        self.gain = int(self.config.get('fcc', 'gain'))
 
         self.connectCamera(self.bcast)
 
     def connectCamera(self, cmd, doFinish=True):
         reload(camera)
-        self.camera = camera.Camera(host=self.host, port=self.port)
+        self.camera = camera.Camera(cmd, exptime=self.exptime, gain=self.gain)
         self.camera.sendStatusKeys(cmd)
 
 #
