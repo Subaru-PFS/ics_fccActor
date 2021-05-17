@@ -6,7 +6,7 @@ import time
 import logging
 
 class Camera:
-    """FLI usb camera"""
+    """BAP Image Systems AC62KUSB minicamera"""
 
     def __init__(self, exptime=240, gain=0):
         """search and find the camera device"""
@@ -44,6 +44,12 @@ class Camera:
         minicamera_c_set_parameter(self.device, CAMERA_0, MINICAMERA_INT_PARAM_EXPOSURE_TIME, self.exptime)
         minicamera_c_set_parameter(self.device, CAMERA_0, MINICAMERA_INT_PARAM_GAIN, self.gain)
         minicamera_c_set_parameter(self.device, CAMERA_1, MINICAMERA_INT_PARAM_CAMERA_ENABLE, 0)
+        minicamera_c_set_parameter(self.device, CAMERA_1, MINICAMERA_INT_PARAM_DSP_TEST_PATTERN, 0)
+        minicamera_c_set_parameter(self.device, CAMERA_1, MINICAMERA_INT_PARAM_VOLTAGE, MC_SENSOR_VOLTAGE)
+        minicamera_c_set_parameter(self.device, CAMERA_1, MINICAMERA_INT_COLOR_SENSOR, 0)
+        minicamera_c_set_parameter(self.device, CAMERA_1, MINICAMERA_INT_CONTRAST_ENHANCEMENT, 0)
+        minicamera_c_set_parameter(self.device, CAMERA_1, MINICAMERA_INT_PARAM_EXPOSURE_TIME, self.exptime)
+        minicamera_c_set_parameter(self.device, CAMERA_1, MINICAMERA_INT_PARAM_GAIN, self.gain)
 
         self.logger.info('Camera initialized')
 
@@ -81,18 +87,26 @@ class Camera:
 
         count = 0
         failure = 0
+        time.sleep(0.1)
         while count < frames:
+#            time.sleep(self.exptime / 3000.0)
+            time.sleep(0.01)
             res = minicamera_get_raw_camera_image(self.device, &buffer, &camera_id, &img_id, &c_bpp,
-                &c_num, &width, &height, MC_IMAGE_CAPTURE_TIMEOUT)
+                  &c_num, &width, &height, MC_IMAGE_CAPTURE_TIMEOUT)
             if res == MC_OVERFLOW_SW:
                 raise RuntimeError('failed to capture images, SW overflow!')
             elif res != MC_OK:
                 # It's necessary to skip tons of MC_NO_IMAGE errors in the beginning......
                 if res != MC_NO_IMAGE:
                     self.logger.info(f'failed to capture images: {res}, count: {failure}')
+                self.logger.debug(f'get image failed: {res}, W:{width}, H:{height}')
                 failure += 1
-                continue
+                if failure > frames * 100:
+                    raise RuntimeError('too many failure for capture image!')
+                else:
+                    continue
 
+            self.logger.debug('Failure number: %d' % failure)
             self.logger.info(f'capture images successfully, frame:{img_id}, size:{width}x{height}, bpp:{c_bpp}')
             if count == 0:
                 self.buffer = np.zeros((height, width), dtype=np.int16)
